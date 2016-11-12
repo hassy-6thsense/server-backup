@@ -16,9 +16,20 @@ for database in ${databases}
 do
     if [ "${database}" != "information_schema" ] && [ "${database}" != "performance_schema" ]; then
         echo "dumping: ${database}" >> "${mysql_log_file}"
-        # mysqldump実行
+
         dump_file="${mysql_dir}/$(hostname)_${database}.sql"
-        ${mysqldump} --verbose --user="${mysql_user}" --password="${mysql_password}" --debug-check --debug-info --log-error="${mysql_log_file}" --quote-names --skip-lock-tables --single-transaction --flush-logs --master-data=2 "${database}" > "${dump_file}" || put_stderr "${mysqldump}: Error"
+
+        # データベースエンジン判定
+        is_myisam="$(${mysql} --user="${mysql_user}" --password="${mysql_password}" information_schema --skip-column-names --silent --execute="SELECT TABLE_SCHEMA FROM information_schema.TABLES WHERE Engine = 'MyISAM' and TABLE_SCHEMA = '${database}' GROUP BY TABLE_SCHEMA")"
+
+        # mysqldump実行
+        if [ "${is_myisam}" = "${database}" ]; then
+            # MyISAM
+            ${mysqldump} --verbose --user="${mysql_user}" --password="${mysql_password}" --debug-check --debug-info --log-error="${mysql_log_file}" --quote-names --flush-logs "${database}" > "${dump_file}" || put_stderr "${mysqldump}: Error"
+        else
+            # InnoDB
+            ${mysqldump} --verbose --user="${mysql_user}" --password="${mysql_password}" --debug-check --debug-info --log-error="${mysql_log_file}" --quote-names --skip-lock-tables --single-transaction --flush-logs --master-data=2 "${database}" > "${dump_file}" || put_stderr "${mysqldump}: Error"
+        fi
     fi
 done
 
