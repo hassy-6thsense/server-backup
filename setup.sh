@@ -16,7 +16,7 @@ function set_remote()
 
     read -ep "バックアップ先のSSHポート番号 [${remote_port}]: " input
     if [ "${input}" != "" ] && [ ${input} -gt 0 ]; then
-        remote_addr="${input}"
+        remote_port="${input}"
     fi
 
     return 0
